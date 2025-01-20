@@ -66,6 +66,19 @@ class LottoService {
   }
 
   buyTicket(ticket: TicketType[]) {
+    if (!Array.isArray(ticket) || ticket.length === 0) {
+      throw new Error("Invalid ticket input");
+    }
+
+    for (const t of ticket) {
+      if (!t.amount || t.amount <= 0 || t.number < 0) {
+        throw new Error("Invalid ticket format");
+      }
+      if (t.number.toString().length > 6) {
+        throw new Error("Ticket number cannot exceed 6 digits");
+      }
+    }
+
     this.customerTicket.push(...ticket);
     return this.customerTicket;
   }
@@ -80,6 +93,27 @@ class LottoService {
     buyNumber: number,
     fixedDigit?: { digit: number; number: number }[]
   ) {
+    if (buyAmount <= 0) {
+      throw new Error("Buy amount must be positive");
+    }
+    if (buyDigit < 1 || buyDigit > 6) {
+      throw new Error("Buy digit must be between 1 and 6");
+    }
+    if (buyNumber <= 0) {
+      throw new Error("Buy number must be positive");
+    }
+
+    if (fixedDigit) {
+      for (const fixed of fixedDigit) {
+        if (fixed.digit > buyDigit) {
+          throw new Error("Fixed digit position cannot exceed buy digit");
+        }
+        if (fixed.number < 0 || fixed.number > 9) {
+          throw new Error("Fixed number must be between 0 and 9");
+        }
+      }
+    }
+
     const randomNumbers: TicketType[] = [];
     const maxNumber = Math.pow(10, buyDigit);
     let fixedPositions: Map<number, string> | null = null;
@@ -125,21 +159,22 @@ class LottoService {
   setDraw() {
     const randomLotto = Math.floor(Math.random() * 1000000);
     this.drawResult = randomLotto.toString();
-    // for testing
-    // this.drawResult = "123458";
   }
 
   checkWinTicket() {
-    const winningTickets: { ticket: TicketType; prize: number }[] = [];
-    const drawResult = this.drawResult;
-
-    if (!drawResult) {
-      return winningTickets;
+    if (!this.drawResult) {
+      throw new Error("Draw result not set");
     }
+
+    if (this.customerTicket.length === 0) {
+      throw new Error("No tickets to check");
+    }
+
+    const winningTickets: { ticket: TicketType; prize: number }[] = [];
 
     for (const ticket of this.customerTicket) {
       const ticketStr = ticket.number.toString();
-      const winNumber = drawResult.slice(-ticketStr.length);
+      const winNumber = this.drawResult.slice(-ticketStr.length);
 
       if (ticketStr === winNumber) {
         const multiplier = Math.pow(10, ticketStr.length);
